@@ -1,27 +1,25 @@
-# koa-cache-hits
+# cache
 
-[![NPM version](https://img.shields.io/npm/v/@zcorky/koa-cache-hits.svg?style=flat)](https://www.npmjs.com/package/@zcorky/koa-cache-hits)
-[![Coverage Status](https://img.shields.io/coveralls/zcorky/koa-cache-hits.svg?style=flat)](https://coveralls.io/r/zcorky/koa-cache-hits)
-[![Dependencies](https://david-dm.org/@zcorky/koa-cache-hits/status.svg)](https://david-dm.org/@zcorky/koa-cache-hits)
-[![Build Status](https://travis-ci.com/zcorky/koa-cache-hits.svg?branch=master)](https://travis-ci.com/zcorky/koa-cache-hits)
-![license](https://img.shields.io/github/license/zcorky/koa-cache-hits.svg)
-[![issues](https://img.shields.io/github/issues/zcorky/koa-cache-hits.svg)](https://github.com/zcorky/koa-cache-hits/issues)
+[![NPM version](https://img.shields.io/npm/v/@koex/koa-cache-hits.svg?style=flat)](https://www.npmjs.com/package/@koex/koa-cache-hits)
+[![Coverage Status](https://img.shields.io/coveralls/koex/koa-cache-hits.svg?style=flat)](https://coveralls.io/r/koex/koa-cache-hits)
+[![Dependencies](https://david-dm.org/@koex/koa-cache-hits/status.svg)](https://david-dm.org/@koex/koa-cache-hits)
+[![Build Status](https://travis-ci.com/koex/koa-cache-hits.svg?branch=master)](https://travis-ci.com/koex/koa-cache-hits)
+![license](https://img.shields.io/github/license/koex/koa-cache-hits.svg)
+[![issues](https://img.shields.io/github/issues/koex/koa-cache-hits.svg)](https://github.com/koex/koa-cache-hits/issues)
 
-> Deep Diff & Patch in js, maybe data visition timeline json data is common for use.
-> Diff => CREATE / UPDATE / DELETE / UNCHANGE Data.
-> Patch => Immutable Philosophy Data.
+> cache for koa extend. And you can custom auto cache db, like redis.
 
 ### Install
 
 ```
-$ npm install @zcorky/koa-cache-hits
+$ npm install @koex/cache
 ```
 
 ### Usage
 
 ```javascript
 // See more in test
-import cache from '@zcorky/koa-cache-hits';
+import cache from '@koex/cache';
 
 import * as Koa from 'koa';
 const app = new Koa();
