@@ -61,9 +61,9 @@ const creatCacheHits = (options?: Options) => {
 
     const data = {
       body: ctx.body,
-      type: ctx.get('Content-Type'),
-      lastModified: ctx.get('Last-Modified'),
-      etag: ctx.get('etag'),
+      type: ctx.response.get('Content-Type'),
+      lastModified: ctx.response.get('Last-Modified'),
+      etag: ctx.response.get('etag'),
     };
 
     await db.set(key, data);
