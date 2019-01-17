@@ -54,6 +54,11 @@ const creatCacheHits = (options?: Options) => {
 
     await next();
 
+    // only cache GET/HEAD 200 and have body
+    if (ctx.method !== 'GET' && ctx.method !== 'HEAD') return ;
+    if (ctx.status !== 200) return ;
+    if (!ctx.body) return ;
+
     const data = {
       body: ctx.body,
       type: ctx.get('Content-Type'),
