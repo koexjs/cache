@@ -7,13 +7,20 @@ export type DB<K, V> = {
   set(key: K, value: V): void | Promise<void>
   [key: string]: any;
 } & ILRU<K, V>;
-export interface Options<K, V> {
+export interface Options {
   key?: keyof Context & string | ((ctx: Context) => string);
   max?: number;
-  db?: DB<K, V>;
+  db?: DB<string, Cached>;
 }
 
-const creatCacheHits = <V = any>(options?: Options<string, V>) => {
+export interface Cached {
+  body: any;
+  type: string;
+  lastModified: string;
+  etag: string;
+};
+
+const creatCacheHits = (options?: Options) => {
   const _options = options || {};
   const getKey = isUndefined(_options.key)
     ? (ctx: Context) => ctx.originalUrl || ctx.url
@@ -22,7 +29,7 @@ const creatCacheHits = <V = any>(options?: Options<string, V>) => {
       : _options.key;
 
   const max = _options.max || 100;
-  const db = _options.db || new LRU<string, V>(max);
+  const db = _options.db || new LRU<string, Cached>(max);
 
   return async function koaCacheHit (ctx: Context, next: () => Promise<any>) {
     if (ctx.method !== 'GET') {
@@ -35,14 +42,25 @@ const creatCacheHits = <V = any>(options?: Options<string, V>) => {
     if (cached) {
       const hits = db.hits();
       ctx.set('X-Cache-Hits', `rate=${(hits.rate * 100).toFixed(2)}%`);
+
+      ctx.set('Content-Type', cached.type);
+      ctx.set('Last-Modified', cached.type);
+      ctx.set('etag', cached.type);
+
       ctx.status = 200;
-      ctx.body = cached;
+      ctx.body = cached.body;
       return;
     }
 
     await next();
 
-    const data = ctx.body;
+    const data = {
+      body: ctx.body,
+      type: ctx.get('Content-Type'),
+      lastModified: ctx.get('Last-Modified'),
+      etag: ctx.get('etag'),
+    };
+
     await db.set(key, data);
   };
 }
