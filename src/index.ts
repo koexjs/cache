@@ -26,12 +26,12 @@ const creatCacheHits = (options?: Options) => {
     ? (ctx: Context) => ctx.originalUrl || ctx.url
     : isString(_options.key)
       ? (ctx: Context) => ctx[_options.key as any] as string
-      : _options.key;
+      : () => _options.key as string;
 
   const max = _options.max || 100;
   const db = _options.db || new LRU<string, Cached>(max);
 
-  return async function koaCacheHit (ctx: Context, next: () => Promise<any>) {
+  return async function cache(ctx: Context, next: () => Promise<any>) {
     if (ctx.method !== 'GET') {
       return next();
     }
@@ -43,11 +43,16 @@ const creatCacheHits = (options?: Options) => {
       const hits = db.hits();
       ctx.set('X-Cache-Hits', `rate=${(hits.rate * 100).toFixed(2)}%`);
 
-      ctx.set('Content-Type', cached.type);
-      ctx.set('Last-Modified', cached.type);
-      ctx.set('etag', cached.type);
+      ctx.type = cached.type;
+      setType(ctx, 'Content-Type', cached.type);
+      setType(ctx, 'Last-Modified', cached.lastModified);
+      setType(ctx, 'etag', cached.etag);
 
-      ctx.status = 200;
+      if (ctx.request.fresh) {
+        ctx.status = 200;
+      }
+
+      // ctx.status = 200;
       ctx.body = cached.body;
       return;
     }
@@ -68,6 +73,12 @@ const creatCacheHits = (options?: Options) => {
 
     await db.set(key, data);
   };
+
+  function setType(ctx: Context, type: string, value: string) {
+    if (value) {
+      ctx.set(type, value);
+    }
+  }
 }
 
 export {
