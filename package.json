@@ -10,11 +10,12 @@
   "scripts": {
     "build": "npm run clean && tsc",
     "clean": "rimraf -rf lib",
-    "test": "NODE_ENV=test nyc mocha test/*.spec.ts test/**/*.spec.ts --exit --timeout 10000",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "test": "jest",
+    "coverage": "jest && codecov",
     "prepublish": "npm run build"
   },
   "devDependencies": {
+    "@types/jest": "^23.3.12",
     "@types/koa": "^2.0.47",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.9.4",
@@ -22,8 +23,10 @@
     "@zcorky/is": "^1.0.1",
     "chai": "^4.1.2",
     "chai-spies": "^1.0.0",
+    "codecov": "^3.1.0",
     "coveralls": "^3.0.2",
     "global": "^4.3.2",
+    "jest": "^23.6.0",
     "koa": "^2.6.2",
     "mocha": "^5.2.0",
     "nyc": "^13.1.0",
@@ -31,6 +34,7 @@
     "sinon": "^6.3.4",
     "source-map-support": "^0.5.9",
     "supertest": "^3.3.0",
+    "ts-jest": "^23.10.5",
     "ts-node": "^7.0.1",
     "tslint": "^5.10.0",
     "tslint-eslint-rules": "^5.3.1",
@@ -40,23 +44,37 @@
   "files": [
     "lib/"
   ],
-  "nyc": {
-    "check-coverage": true,
-    "include": [
-      "src/**/*.ts"
+  "jest": {
+    "roots": [
+      "test"
     ],
-    "exclude": [
-      "**/*.d.ts"
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "test/.*\\.spec\\.(ts|tsx)$",
+    "moduleDirectories": [
+      "node_modules",
+      "src"
     ],
-    "extension": [
-      ".ts"
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx"
     ],
-    "require": [
-      "ts-node/register",
-      "source-map-support/register"
+    "coverageDirectory": "./coverage/",
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}"
     ],
-    "sourceMap": true,
-    "instrument": true
+    "coverageThreshold": {
+      "global": {
+        "branches": 50,
+        "functions": 50,
+        "lines": 90,
+        "statements": -10
+      }
+    }
   },
   "publishConfig": {
     "access": "public"
