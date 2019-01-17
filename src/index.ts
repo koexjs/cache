@@ -26,7 +26,7 @@ const creatCacheHits = (options?: Options) => {
     ? (ctx: Context) => ctx.originalUrl || ctx.url
     : isString(_options.key)
       ? (ctx: Context) => ctx[_options.key as any] as string
-      : () => _options.key as string;
+      : _options.key;
 
   const max = _options.max || 100;
   const db = _options.db || new LRU<string, Cached>(max);
@@ -49,7 +49,7 @@ const creatCacheHits = (options?: Options) => {
       setType(ctx, 'etag', cached.etag);
 
       if (ctx.request.fresh) {
-        ctx.status = 200;
+        ctx.status = 304;
       }
 
       // ctx.status = 200;
