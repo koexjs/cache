@@ -2,6 +2,39 @@ import { Context } from 'koa';
 import LRU, { Hits } from '@zcorky/lru';
 import { undefined as isUndefined, string as isString } from '@zcorky/is';
 
+declare module 'koa' {
+  interface CacheUtils {
+    /**
+     * Get a value from store by key.
+     *
+     * @param key cache key
+     * @param maxAge cache max age
+     * @returns Promise<Cached>
+     */
+    get<T = any>(key: string, maxAge?: number): Promise<T | undefined>;
+
+    /**
+     * Set a value to store.
+     *
+     * @param key cache key
+     * @param value cache value
+     * @param maxAge cache max age
+     */
+    set<T = any>(key: string, value: T, maxAge?: number): Promise<void>
+  }
+  export interface Context {
+    /**
+     * disable koex cache
+     */
+    disableCache?: boolean;
+
+    /**
+     * cache utils.
+     */
+    cache: CacheUtils;
+  }
+}
+
 export interface Options {
   /**
    * A hash key function. default: (ctx: Context) => ctx.url.
@@ -46,9 +79,6 @@ export interface Options {
 
 export interface Cached {
   body: any;
-  type: string;
-  lastModified: string;
-  etag: string;
 };
 
 const createDb = (max: number) => {
@@ -67,7 +97,7 @@ const createDb = (max: number) => {
   };
 }
 
-const creatCacheHits = (options?: Options) => {
+const createCache = (options?: Options) => {
   const _options = options || {} as Options;
   const getKey = isUndefined(_options.key)
     ? (ctx: Context) => ctx.originalUrl || ctx.url
@@ -80,7 +110,7 @@ const creatCacheHits = (options?: Options) => {
   const maxAge = _options.maxAge || 3600000;
   let { get, set, hits } = _options;
 
-  if (!get || !set || !hits) {
+  if (!get || !set) {
     const database = createDb(max);
 
     get = database.get;
@@ -88,28 +118,35 @@ const creatCacheHits = (options?: Options) => {
     hits = database.hits;
   }
 
+  const cacheUtils = { get, set };
+
   return async function koexCache(ctx: Context, next: () => Promise<any>) {
-    if (ctx.method !== 'GET') {
+    // override ctx.cache
+    ctx.cache = cacheUtils as any;
+
+    if (ctx.disableCache) {
       return next();
+    }
+
+    if (ctx.method !== 'GET' && ctx.method !== 'HEAD') {
+      return next();
+    }
+
+    if (ctx.request.fresh) {
+      ctx.status = 304;
+      return ;
     }
 
     const key = getKey(ctx);
     const cached = await get!(key, maxAge);
 
     if (cached) {
-      const hitsCount = await hits!(key);
-      ctx.set('X-Cache-Hits', `rate=${(hitsCount.rate * 100).toFixed(2)}%`);
-
-      ctx.type = cached.type;
-      setType(ctx, 'Content-Type', cached.type);
-      setType(ctx, 'Last-Modified', cached.lastModified);
-      setType(ctx, 'etag', cached.etag);
-
-      if (ctx.request.fresh) {
-        ctx.status = 304;
+      if (hits) {
+        const hitsCount = await hits!(key);
+        ctx.set('X-Cache-Hits', `rate=${(hitsCount.rate * 100).toFixed(2)}%`);
       }
 
-      // ctx.status = 200;
+      ctx.status = 200;
       ctx.body = cached.body;
       return;
     }
@@ -121,25 +158,18 @@ const creatCacheHits = (options?: Options) => {
     if (ctx.status !== 200) return ;
     if (!ctx.body) return ;
 
+    const body = ctx.body
+
     const data = {
-      body: ctx.body,
-      type: ctx.response.get('Content-Type'),
-      lastModified: ctx.response.get('Last-Modified'),
-      etag: ctx.response.get('etag'),
+      body,
     };
 
     await set!(key, data, maxAge);
   };
-
-  function setType(ctx: Context, type: string, value: string) {
-    if (value) {
-      ctx.set(type, value);
-    }
-  }
 }
 
 export {
-  creatCacheHits,
+  createCache,
 };
 
-export default creatCacheHits;
+export default createCache;
