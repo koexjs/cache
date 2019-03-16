@@ -1,16 +1,47 @@
 import { Context } from 'koa';
-import LRU, { LRU as ILRU} from '@zcorky/lru';
+import LRU, { Hits } from '@zcorky/lru';
 import { undefined as isUndefined, string as isString } from '@zcorky/is';
 
-export type DB<K, V> = {
-  get(key: K): V | Promise<V>;
-  set(key: K, value: V): void | Promise<void>
-  [key: string]: any;
-} & ILRU<K, V>;
 export interface Options {
+  /**
+   * A hash key function. default: (ctx: Context) => ctx.url.
+   */
   key?: keyof Context & string | ((ctx: Context) => string);
+
+  /**
+   * Max db cache size for LRU. If use self db instance, it will be ignored.
+   */
   max?: number;
-  db?: DB<string, Cached>;
+
+  /**
+   * Cache max age. default: 3600 (s);
+   */
+  maxAge?: number;
+
+  /**
+   * Get a value from store by key.
+   *
+   * @param key cache key
+   * @param maxAge cache max age
+   * @returns Promise<Cached>
+   */
+  get?(key: string, maxAge: number): Promise<Cached | undefined>;
+
+  /**
+   * Set a value to store.
+   *
+   * @param key cache key
+   * @param value cache value
+   * @param maxAge cache max age
+   */
+  set?(key: string, value: Cached, maxAge: number): Promise<void>
+
+  /**
+   * Hit cache key with { count, rate }
+   *
+   * @param key cache key
+   */
+  hits?(key: string): Hits | Promise<Hits>;
 }
 
 export interface Cached {
@@ -20,8 +51,24 @@ export interface Cached {
   etag: string;
 };
 
+const createDb = (max: number) => {
+  const db = new LRU<string, Cached>(max);
+
+  return {
+    async get(key: string, maxAge: number) {
+      return db.get(key, { maxAge });
+    },
+    async set(key: string, value: Cached, maxAge: number) {
+      db.set(key, value, { maxAge });
+    },
+    async hits(key: string) {
+      return db.hits() as Hits;
+    },
+  };
+}
+
 const creatCacheHits = (options?: Options) => {
-  const _options = options || {};
+  const _options = options || {} as Options;
   const getKey = isUndefined(_options.key)
     ? (ctx: Context) => ctx.originalUrl || ctx.url
     : isString(_options.key)
@@ -29,19 +76,29 @@ const creatCacheHits = (options?: Options) => {
       : _options.key;
 
   const max = _options.max || 100;
-  const db = _options.db || new LRU<string, Cached>(max);
 
-  return async function cache(ctx: Context, next: () => Promise<any>) {
+  const maxAge = _options.maxAge || 3600000;
+  let { get, set, hits } = _options;
+
+  if (!get || !set || !hits) {
+    const database = createDb(max);
+
+    get = database.get;
+    set = database.set;
+    hits = database.hits;
+  }
+
+  return async function koexCache(ctx: Context, next: () => Promise<any>) {
     if (ctx.method !== 'GET') {
       return next();
     }
 
     const key = getKey(ctx);
-    const cached = await db.get(key);
+    const cached = await get!(key, maxAge);
 
     if (cached) {
-      const hits = db.hits();
-      ctx.set('X-Cache-Hits', `rate=${(hits.rate * 100).toFixed(2)}%`);
+      const hitsCount = await hits!(key);
+      ctx.set('X-Cache-Hits', `rate=${(hitsCount.rate * 100).toFixed(2)}%`);
 
       ctx.type = cached.type;
       setType(ctx, 'Content-Type', cached.type);
@@ -71,7 +128,7 @@ const creatCacheHits = (options?: Options) => {
       etag: ctx.response.get('etag'),
     };
 
-    await db.set(key, data);
+    await set!(key, data, maxAge);
   };
 
   function setType(ctx: Context, type: string, value: string) {
