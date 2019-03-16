@@ -3,8 +3,35 @@ import LRU, { Hits } from '@zcorky/lru';
 import { undefined as isUndefined, string as isString } from '@zcorky/is';
 
 declare module 'koa' {
+  interface CacheUtils {
+    /**
+     * Get a value from store by key.
+     *
+     * @param key cache key
+     * @param maxAge cache max age
+     * @returns Promise<Cached>
+     */
+    get<T = any>(key: string, maxAge?: number): Promise<T | undefined>;
+
+    /**
+     * Set a value to store.
+     *
+     * @param key cache key
+     * @param value cache value
+     * @param maxAge cache max age
+     */
+    set<T = any>(key: string, value: T, maxAge?: number): Promise<void>
+  }
   export interface Context {
+    /**
+     * disable koex cache
+     */
     disableCache?: boolean;
+
+    /**
+     * cache utils.
+     */
+    cache: CacheUtils;
   }
 }
 
@@ -91,7 +118,12 @@ const createCache = (options?: Options) => {
     hits = database.hits;
   }
 
+  const cacheUtils = { get, set };
+
   return async function koexCache(ctx: Context, next: () => Promise<any>) {
+    // override ctx.cache
+    ctx.cache = cacheUtils as any;
+
     if (ctx.disableCache) {
       return next();
     }
