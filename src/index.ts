@@ -100,10 +100,10 @@ const createDb = (max: number) => {
 const createCache = (options?: Options) => {
   const _options = options || {} as Options;
   const getKey = isUndefined(_options.key)
-    ? (ctx: Context) => ctx.originalUrl || ctx.url
+    ? (ctx: Context) => (ctx.originalUrl || ctx.url) as string
     : isString(_options.key)
       ? (ctx: Context) => ctx[_options.key as any] as string
-      : _options.key;
+      : _options.key as (ctx: any) => string;
 
   const max = _options.max || 100;
 
@@ -123,10 +123,6 @@ const createCache = (options?: Options) => {
   return async function koexCache(ctx: Context, next: () => Promise<any>) {
     // override ctx.cache
     ctx.cache = cacheUtils as any;
-
-    if (ctx.disableCache) {
-      return next();
-    }
 
     if (ctx.method !== 'GET' && ctx.method !== 'HEAD') {
       return next();
@@ -152,6 +148,11 @@ const createCache = (options?: Options) => {
     }
 
     await next();
+
+    // support controller disable cache custom
+    if (ctx.disableCache) {
+      return ;
+    }
 
     // only cache GET/HEAD 200 and have body
     if (ctx.method !== 'GET' && ctx.method !== 'HEAD') return ;
