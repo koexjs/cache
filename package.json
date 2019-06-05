@@ -1,6 +1,6 @@
 {
   "name": "@koex/cache",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "cahe hits for koa",
   "main": "lib/index.js",
   "module": "lib/index.js",
