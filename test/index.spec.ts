@@ -9,6 +9,11 @@ const createApp = (options?: Options) => {
   _app.use(Cache(options));
   _app.use(async (ctx: Koa.Context) => {
     if (ctx.path === '/') {
+      // if (ctx.query.disableCache) {
+      //   ctx.disableCache = true;
+      // }
+      // console.log('query: ', ctx.query);
+
       ctx.body = 'hello, world';
     } else if (ctx.path === '/json') {
       ctx.body = {
@@ -153,6 +158,18 @@ describe('Cache Hits', () => {
         .expect('{"name":"name","value":"value"}', (err, res) => {
           if (err) return done(err);
 
+          done();
+        });
+    });
+
+    it('disable cache manually', (done) => {
+      request(app.callback())
+      .get('/?disableCache=true')
+      .expect(200)
+        .expect('hello, world', (err, res) => {
+          if (err) return done(err);
+
+          expect(res.headers['X-Cache-Hits']).toEqual(undefined);
           done();
         });
     });
