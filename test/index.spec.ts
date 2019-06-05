@@ -25,11 +25,6 @@ const createApp = (options?: Options) => {
       }
 
       ctx.body = user;
-    } else if (ctx.path === '/disable-cache') {
-      ctx.disableCache = true;
-      ctx.set('x-disable-cache', 'server');
-
-      ctx.body = 'hello, world';
     }
   });
 
@@ -159,40 +154,6 @@ describe('Cache Hits', () => {
           if (err) return done(err);
 
           done();
-        });
-    });
-
-    it('disable cache manually', (done) => {
-      request(app.callback())
-        .get('/disable-cache')
-        .expect(200)
-        .expect('hello, world', (err, res) => {
-          if (err) return done(err);
-
-          expect(res.headers['x-disable-cache']).toEqual('server');
-          expect(res.headers['X-Cache-Hits']).toEqual(undefined);
-          
-          request(app.callback())
-            .get('/disable-cache')
-            .expect(200)
-            .expect('hello, world', (err, res) => {
-              if (err) return done(err);
-
-              expect(res.headers['x-disable-cache']).toEqual('server');
-              expect(res.headers['X-Cache-Hits']).toEqual(undefined);
-              
-              request(app.callback())
-                .get('/disable-cache')
-                .expect(200)
-                .expect('hello, world', (err, res) => {
-                  if (err) return done(err);
-
-                  expect(res.headers['x-disable-cache']).toEqual('server');
-                  expect(res.headers['X-Cache-Hits']).toEqual(undefined);
-                  
-                  done();
-                });
-            });
         });
     });
   });
